@@ -1,152 +1,155 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>Stream animation</title>
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-    />
-    <link rel="stylesheet" href="./node_modules/leaflet/dist/leaflet.css" />
-    <link rel="stylesheet" href="./style/main.css" />
 
-    <link
-      href="https://fonts.googleapis.com/css?family=Roboto:100,400"
-      rel="stylesheet"
-    />
-  </head>
+<head>
+  <title>Stream animation</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <link rel="stylesheet" href="./style/leaflet.css" />
+  <link rel="stylesheet" href="./style/main.css" />
 
-  <body>
-    <h1 class="title mapTitle">
-      Stream animation width interpolated temperatures
-    </h1>
-    <h2 class="title mapTitle mapTitle--source">
-      WRF data, 2022. 12. 29. 06UTC
-    </h2>
-    <div id="map"></div>
+  <link href="https://fonts.googleapis.com/css?family=Roboto:100,400" rel="stylesheet" />
+</head>
 
-    <!-- CDN -->
-    <script src="./js/d3.v4.min.js"></script>
-    <script src="./node_modules/leaflet/dist/leaflet.js"></script>
-    <script src="./node_modules/chroma-js/chroma.min.js"></script>
-<script src="./data/hungary.js"></script>
+<body>
+  <h1 class="title mapTitle">
+    Stream animation width interpolated temperatures
+  </h1>
+  <h2 class="title mapTitle mapTitle--source">
+    WRF data, 2022. 12. 29. 06UTC
+  </h2>
+  <div id="map"></div>
 
-    <!-- Plugin -->
-    <script src="./js/field.js"></script>
+  <!-- CDN -->
+  <script src="./js/d3.v4.min.js"></script>
+  <script src="./js/leaflet.js"></script>
+  <script src="./js/chroma.min.js"></script>
+  <script src="./data/hungary.js"></script>
 
-    <script>
-      let map = L.map("map");
+  <!-- Plugin -->
+  <script src="./js/field.js"></script>
 
-      /* Basemap */
-      let url = 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_nolabels/{z}/{x}/{y}.png';
-      //let url =
-        "https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png";
+  <script>
+    let map = L.map("map");
 
-      L.tileLayer(url, {
-        attribution: "OSM & Carto",
-        subdomains: "abcd",
-        maxZoom: 19,
-      }).addTo(map);
+    let popupTemperatureText = '';
 
-      /* An ASCIIGrid Raster with Surface current velocity */
-      d3.text("./data/T_data20221229_0600+00000.asc", function (asc) {
-        let s = L.ScalarField.fromASCIIGrid(asc);
-        s.cellYSize = 0.024147;
-        s.yurCorner = 49.1129;
-        let c = chroma.scale(["blue", "green", "yellow", "red"]).domain(s.range);
+    /* Basemap */
+    let url = 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_nolabels/{z}/{x}/{y}.png';
+    //let url =
+    "https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png";
 
-        let identify = function (e) {
-          if (e.value !== null) {
-            let v = e.value.toFixed(1);
-            let html = `<span class="popupText">Surface current temperature ${v} Celsius degree</span>`;
-            let popup = L.popup()
-              .setLatLng(e.latlng)
-              .setContent(html)
-              .openOn(map);
-          }
-        };
+    L.tileLayer(url, {
+      attribution: "OSM & Carto",
+      subdomains: "abcd",
+      maxZoom: 19,
+    }).addTo(map);
 
-        // Bilinear interpolation
-        let interpolated = L.canvasLayer.scalarField(s, {
-          interpolate: true,
-          color: c,
-        });
-        interpolated.on("click", identify);
-        interpolated.addTo(map);
-        interpolated.setOpacity(0.8);
+    /* An ASCIIGrid Raster with Surface current velocity */
+    d3.text("./data/T_data20221229_0600+00000.asc", function (asc) {
+      let s = L.ScalarField.fromASCIIGrid(asc);
+      s.cellYSize = 0.024147;
+      s.yurCorner = 49.1129;
+      let c = chroma.scale(["blue", "green", "yellow", "red"]).domain(s.range);
 
-        /*
-      // vs original
-      let original = L.canvasLayer.scalarField(s, {
+      let identify = function (e) {
+        if (e.value !== null) {
+          let v = e.value.toFixed(1);
+          popupTemperatureText = `Current surface temperature is ${v} Celsius degree, `
+          /*
+          let popupTemperature = `<span class="popupText">Surface current temperature ${v} Celsius degree</span>`;
+          let popup = L.popup()
+            .setLatLng(e.latlng)
+            .setContent(html)
+            .openOn(map);
+          */
+        }
+      };
+
+      // Bilinear interpolation
+      let interpolated = L.canvasLayer.scalarField(s, {
+        interpolate: true,
         color: c,
       });
-      original.on('click', identify);
-      map.fitBounds(interpolated.getBounds());
-      original.setOpacity(0.8);
-
-
-      L.control.layers({
-        "Interpolated": interpolated,
-        "Original": original
-      }, {}, {
-        position: 'bottomleft',
-        collapsed: false
-      }).addTo(map);
-*/
-      });
-
-      /* Default vectorfield animation, from two ASCIIGrid files with u|v current velocity */
-      d3.text("data/u_data20221229_0600+00000.asc", function (u) {
-        d3.text("data/v_data20221229_0600+00000.asc", function (v) {
-          let vf = L.VectorField.fromASCIIGrids(u, v);
-          vf.cellYSize = 0.024147;
-          vf.yurCorner = 49.1129;
-          let layer = L.canvasLayer.vectorFieldAnim(vf).addTo(map);
-          map.fitBounds(layer.getBounds());
-
-          layer.on("click", function (e) {
-            if (e.value !== null) {
-              let vector = e.value;
-              let v = vector.magnitude().toFixed(2);
-              let d = vector.directionTo().toFixed(0);
-              let html = `<span class="popupText">${v} m/s to ${d}&deg</span>`;
-              let popup = L.popup()
-                .setLatLng(e.latlng)
-                .setContent(html)
-                .openOn(map);
-            }
-          }); // {onClick: callback} inside 'options' is also supported when using layer contructor
-        });
-      });
-
-      L.tileLayer(url, {
-        attribution:
-          '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        subdomains: "abcd",
-      }).addTo(map);
+      interpolated.on("click", identify);
+      interpolated.addTo(map);
+      interpolated.setOpacity(0.8);
 
       /*
-      const myGeoJSONPath = "data/test.json";
-      getJSON(myGeoJSONPath,function(data){
-        var map = L.map('map').setView([39.74739, -105], 4);
-        */
+    // vs original
+    let original = L.canvasLayer.scalarField(s, {
+      color: c,
+    });
+    original.on('click', identify);
+    map.fitBounds(interpolated.getBounds());
+    original.setOpacity(0.8);
 
-       const myCustomStyle = {
-         stroke: true,
-         fill: false,
-         fillColor: "black",
-         //fillOpacity: 0,
-         color: "black",
-         weight: 3,
-         opacity: 1,
-       };
 
-      L.geoJson(hungary, {
-        clickable: false,
-        style: myCustomStyle,
-      }).addTo(map);
+    L.control.layers({
+      "Interpolated": interpolated,
+      "Original": original
+    }, {}, {
+      position: 'bottomleft',
+      collapsed: false
+    }).addTo(map);
+*/
+    });
+
+    /* Default vectorfield animation, from two ASCIIGrid files with u|v current velocity */
+    d3.text("data/u_data20221229_0600+00000.asc", function (u) {
+      d3.text("data/v_data20221229_0600+00000.asc", function (v) {
+        let vf = L.VectorField.fromASCIIGrids(u, v);
+        vf.cellYSize = 0.024147;
+        vf.yurCorner = 49.1129;
+        let layer = L.canvasLayer.vectorFieldAnim(vf).addTo(map);
+        map.fitBounds(layer.getBounds());
+
+        layer.on("click", function (e) {
+          if (e.value !== null) {
+            let vector = e.value;
+            let v = vector.magnitude().toFixed(1);
+
+            let d = parseInt(vector.directionTo().toFixed(0));
+            d = d + 180 < 360 ? d + 180 : d - 180;
+            let popupWind = `<span class="popupText">${popupTemperatureText}and wind speed is ${v} m/s from ${d}&deg.</span>`;
+            let popup = L.popup()
+              .setLatLng(e.latlng)
+              .setContent(popupWind)
+              .openOn(map);
+          }
+        }); // {onClick: callback} inside 'options' is also supported when using layer contructor
+      });
+    });
+
+    L.tileLayer(url, {
+      attribution:
+        '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      subdomains: "abcd",
+    }).addTo(map);
+
+    /*
+    const myGeoJSONPath = "data/test.json";
+    getJSON(myGeoJSONPath,function(data){
+      var map = L.map('map').setView([39.74739, -105], 4);
+      */
+
+    const myCustomStyle = {
+      stroke: true,
+      fill: false,
+      fillColor: "black",
+      //fillOpacity: 0,
+      color: "black",
+      weight: 3,
+      opacity: 1,
+    };
+
+    L.geoJson(hungary, {
+      clickable: false,
+      style: myCustomStyle,
+    }).addTo(map);
       //})
 
       //map.setZoom(12);
-    </script>
-  </body>
+  </script>
+</body>
+
 </html>
