@@ -16,7 +16,7 @@ body,
 .title {
     color: white;
     font-family: 'Roboto', sans-serif;
-    font-weight: 100;
+    font-weight: 10;
     background-color: black;
 }
 
@@ -29,7 +29,7 @@ body,
 }
 
 .mapTitle--source{
-    top: 40px;
+    top: 20px;
 }
 
 body {
@@ -44,7 +44,7 @@ body {
 }
 
 h2 {
-    font-weight: 100;
+    font-weight: 10;
 }
 
 ul a {
@@ -108,3 +108,12 @@ span.popupText {
     line-height: 20px;
     word-spacing: 0;
 }
+
+.leaflet-tooltip.my-labels {
+    background-color: transparent;
+    border: transparent;
+    box-shadow: none;
+    font-weight: bold;
+    font-size: 15px;
+    translate: 8px;
+    }
